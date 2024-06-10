@@ -3,14 +3,14 @@ import { googleAI } from "@genkit-ai/googleai";
 import express, { Request, Response } from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
-import generateOutput, { sendWAMessage } from "./utils";
+import generateOutput, { sendWAMessage } from "./webhook/wp.message";
 import { grammerCheckFlow } from "./actions/grammer.check";
 import multer from "multer";
 import { extractText, pdfSummaryFlow } from "./actions/pdf.summary";
 import { VerificationRequest, WebhookRequest } from "./webhook/_types/types";
-import axios from "axios";
 import dotenv from "dotenv";
 import { DatabaseService, UserData } from "./service/db";
+import sendTemplate from "./webhook/tamplate";
 
 dotenv.config();
 const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT } = process.env;
@@ -29,13 +29,51 @@ configureGenkit({
   enableTracingAndMetrics: true,
 });
 
+app.post("/webhook", async (req: WebhookRequest, res: Response) => {
+  // log incoming messages
+  console.log("Incoming webhook message:", JSON.stringify(req.body, null, 2));
+
+  const message = req.body.entry?.[0]?.changes[0]?.value?.messages?.[0];
+
+  if (message?.type === "text") {
+    const messageBody = message.text.body;
+    const messageFrom = message.from;
+    const business_phone_number_id =
+      req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
+
+    if (
+      messageBody.toLowerCase() == "hi" ||
+      messageBody.toLowerCase() == "start" ||
+      messageBody.toLowerCase() == "restart"
+    ) {
+      //! send template
+      await sendTemplate(business_phone_number_id, messageFrom);
+    } else {
+      const result = await generateOutput(grammerCheckFlow, messageBody);
+
+      await sendWAMessage(
+        business_phone_number_id,
+        messageFrom,
+        result.message
+      );
+      const userData: UserData = {
+        message: messageBody,
+        response: result.message,
+      };
+      if (business_phone_number_id) {
+        await db.setData(business_phone_number_id, userData);
+      }
+    }
+  }
+  if (message?.type === "button") {
+    //! will be implement after button reaction
+    console.log("Button webhook message:", JSON.stringify(req.body, null, 2));
+  }
+  res.sendStatus(200);
+});
+
 app.post("/db", async (req: Request, res: Response) => {
-  const userData: UserData = {
-    message: "Message",
-    response: "Response",
-  };
-  await db.setData("001", userData);
-  res.status(201).json(userData);
+  res.status(201).json({ userData: "SUCCESS" });
 });
 
 app.post(
@@ -66,32 +104,6 @@ app.get("/webhook", (req: VerificationRequest, res: Response) => {
     // respond with '403 Forbidden' if verify tokens do not match
     res.sendStatus(403);
   }
-});
-
-app.post("/webhook", async (req: WebhookRequest, res: Response) => {
-  // log incoming messages
-  console.log("Incoming webhook message:", JSON.stringify(req.body, null, 2));
-
-  const message = req.body.entry?.[0]?.changes[0]?.value?.messages?.[0];
-
-  if (message?.type === "text") {
-    // extract the business number to send the reply from it
-    const business_phone_number_id =
-      req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
-
-    const result = await generateOutput(grammerCheckFlow, message.text.body);
-
-    await sendWAMessage(business_phone_number_id, message.from, result.message);
-    const userData: UserData = {
-      message: message.text.body,
-      response: result.message,
-    };
-    if (business_phone_number_id) {
-      await db.setData(business_phone_number_id, userData);
-    }
-  }
-
-  res.sendStatus(200);
 });
 
 app.get("/", (req: Request, res: Response) => {
