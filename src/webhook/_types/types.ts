@@ -11,6 +11,10 @@ export interface WebhookRequest extends Request {
               body: string;
             };
             type: string;
+            button: {
+              payload: string;
+              text: string;
+            };
           }>;
           metadata?: {
             phone_number_id: string;

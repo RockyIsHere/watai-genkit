@@ -7,10 +7,15 @@ import generateOutput, { sendWAMessage } from "./webhook/wp.message";
 import { grammerCheckFlow } from "./actions/grammer.check";
 import multer from "multer";
 import { extractText, pdfSummaryFlow } from "./actions/pdf.summary";
-import { VerificationRequest, WebhookRequest } from "./webhook/_types/types";
+import {
+  buttonType,
+  VerificationRequest,
+  WebhookRequest,
+} from "./webhook/_types/types";
 import dotenv from "dotenv";
 import { DatabaseService, UserData } from "./service/db";
 import sendTemplate from "./webhook/tamplate";
+import { paraphraserFlow } from "./actions/paraphraser";
 
 dotenv.config();
 const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT } = process.env;
@@ -46,27 +51,37 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
       messageBody.toLowerCase() == "start" ||
       messageBody.toLowerCase() == "restart"
     ) {
-      //! send template
       await sendTemplate(business_phone_number_id, messageFrom);
     } else {
-      const result = await generateOutput(grammerCheckFlow, messageBody);
+      const userData: UserData | undefined = await db.getData(messageFrom);
+      if (userData) {
+        let result = "";
+        if (userData.conversationId === "grammar_checker") {
+          const { message } = await generateOutput(
+            grammerCheckFlow,
+            messageBody
+          );
+          result = message;
+        }
+        if (userData.conversationId === "paraphraser") {
+          const { message } = await generateOutput(
+            paraphraserFlow,
+            messageBody
+          );
+          result = message;
+        }
 
-      await sendWAMessage(
-        business_phone_number_id,
-        messageFrom,
-        result.message
-      );
-      const userData: UserData = {
-        message: messageBody,
-        response: result.message,
-      };
-      if (business_phone_number_id) {
-        await db.setData(business_phone_number_id, userData);
+        await sendWAMessage(business_phone_number_id, messageFrom, result);
       }
     }
   }
   if (message?.type === "button") {
-    //! will be implement after button reaction
+    const conversationId = message.button.payload as buttonType;
+    const messageFrom = message.from;
+    const userData: UserData = {
+      conversationId,
+    };
+    await db.setData(messageFrom, userData);
     console.log("Button webhook message:", JSON.stringify(req.body, null, 2));
   }
   res.sendStatus(200);
