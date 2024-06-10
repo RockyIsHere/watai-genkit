@@ -11,6 +11,7 @@ import { VerificationRequest, WebhookRequest } from "./webhook/_types/types";
 import axios from "axios";
 import dotenv from "dotenv";
 import { DatabaseService, UserData } from "./service/db";
+
 dotenv.config();
 const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT } = process.env;
 

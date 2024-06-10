@@ -1,12 +1,16 @@
 import { runFlow } from "@genkit-ai/flow";
-const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT } = process.env;
+const {  GRAPH_API_TOKEN } = process.env;
 import axios from "axios";
 
 export default async function generateOutput(llm: any, input: string) {
   return await runFlow(llm, input);
 }
 
-export async function sendWAMessage(phone_number_id:string|undefined,to: string, message: string) {
+export async function sendWAMessage(
+  phone_number_id: string | undefined,
+  to: string,
+  message: string
+) {
   await axios({
     method: "POST",
     url: `https://graph.facebook.com/v18.0/${phone_number_id}/messages`,
