@@ -9,6 +9,8 @@ import multer from "multer";
 import { extractText, pdfSummaryFlow } from "./actions/pdf.summary";
 import { VerificationRequest, WebhookRequest } from "./webhook/_types/types";
 import axios from "axios";
+import dotenv from "dotenv";
+dotenv.config()
 const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT } = process.env;
 
 const app = express();
@@ -27,9 +29,9 @@ configureGenkit({
 
 app.post("/generate", async (req: Request, res: Response) => {
   const input: string = req.body.input;
-  const response = await generateOutput(grammerCheckFlow, input);
+  const result = await generateOutput(grammerCheckFlow, input);
   res.status(201).json({
-    message: response.message.trim().replace(".", ""),
+    message: result.message,
   });
 });
 
@@ -74,7 +76,7 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
     const business_phone_number_id =
       req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
 
-    const response = await generateOutput(grammerCheckFlow, message.text.body);
+    const result = await generateOutput(grammerCheckFlow, message.text.body);
     // send a reply message as per the docs here https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages
     await axios({
       method: "POST",
@@ -85,7 +87,7 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
       data: {
         messaging_product: "whatsapp",
         to: message.from,
-        text: { body: response.data.message.trim().replace(".", "") },
+        text: { body: result.message },
       },
     });
   }
