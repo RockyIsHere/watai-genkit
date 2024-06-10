@@ -21,6 +21,8 @@ export interface WebhookRequest extends Request {
   };
 }
 
+export type buttonType = "grammar_checker" | "paraphraser";
+
 export interface VerificationRequest extends Request {
   query: {
     "hub.mode"?: string;
