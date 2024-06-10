@@ -3,21 +3,22 @@ import { googleAI } from "@genkit-ai/googleai";
 import express, { Request, Response } from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
-import generateOutput from "./utils";
+import generateOutput, { sendWAMessage } from "./utils";
 import { grammerCheckFlow } from "./actions/grammer.check";
 import multer from "multer";
 import { extractText, pdfSummaryFlow } from "./actions/pdf.summary";
 import { VerificationRequest, WebhookRequest } from "./webhook/_types/types";
 import axios from "axios";
 import dotenv from "dotenv";
-dotenv.config()
+import { DatabaseService, UserData } from "./service/db";
+dotenv.config();
 const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT } = process.env;
 
 const app = express();
+const db = new DatabaseService();
 
 app.use(cors());
 app.use(bodyParser.json());
-
 
 const upload = multer({ dest: "uploads/" });
 
@@ -27,12 +28,13 @@ configureGenkit({
   enableTracingAndMetrics: true,
 });
 
-app.post("/generate", async (req: Request, res: Response) => {
-  const input: string = req.body.input;
-  const result = await generateOutput(grammerCheckFlow, input);
-  res.status(201).json({
-    message: result.message,
-  });
+app.post("/db", async (req: Request, res: Response) => {
+  const userData: UserData = {
+    message: "Message",
+    response: "Response",
+  };
+  await db.setData("001", userData);
+  res.status(201).json(userData);
 });
 
 app.post(
@@ -77,29 +79,23 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
       req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
 
     const result = await generateOutput(grammerCheckFlow, message.text.body);
-    // send a reply message as per the docs here https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages
-    await axios({
-      method: "POST",
-      url: `https://graph.facebook.com/v18.0/${business_phone_number_id}/messages`,
-      headers: {
-        Authorization: `Bearer ${GRAPH_API_TOKEN}`,
-      },
-      data: {
-        messaging_product: "whatsapp",
-        to: message.from,
-        text: { body: result.message },
-      },
-    });
+
+    await sendWAMessage(business_phone_number_id, message.from, result.message);
+    const userData: UserData = {
+      message: message.text.body,
+      response: result.message,
+    };
+    if (business_phone_number_id) {
+      await db.setData(business_phone_number_id, userData);
+    }
   }
 
   res.sendStatus(200);
 });
 
-
 app.get("/", (req: Request, res: Response) => {
   res.send(`<h1>Server is running</h1>`);
 });
-
 
 app.listen(PORT, () => {
   console.log("Server is listening at " + PORT);
