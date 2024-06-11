@@ -94,7 +94,7 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
     const userData: UserData = {
       conversationId,
     };
-    await onSelectAction(businessPhoneNumberId, messageFrom, buttonName);
+    // await onSelectAction(businessPhoneNumberId, messageFrom, buttonName);
     await db.setData(messageFrom, userData);
   }
   res.sendStatus(200);
