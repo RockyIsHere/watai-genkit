@@ -1,5 +1,4 @@
 import { buttonType } from "../types";
-
 const { db } = require("../firebase");
 
 export type UserData = {

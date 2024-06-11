@@ -3,7 +3,10 @@ import { googleAI } from "@genkit-ai/googleai";
 import express, { Request, Response } from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
-import generateOutput, { sendWAMessage } from "./webhook/wp.message";
+import generateOutput, {
+  onSelectAction,
+  sendWAMessage,
+} from "./webhook/wp.message";
 import { grammerCheckFlow } from "./actions/grammer.check";
 import multer from "multer";
 import { extractText, pdfSummaryFlow } from "./actions/pdf.summary";
@@ -33,64 +36,73 @@ configureGenkit({
 });
 
 app.post("/webhook", async (req: WebhookRequest, res: Response) => {
-  // log incoming messages
+  // Log incoming messages
   console.log("Incoming webhook message:", JSON.stringify(req.body, null, 2));
 
-  const message = req.body.entry?.[0]?.changes[0]?.value?.messages?.[0];
+  try {
+    const entry = req.body.entry?.[0];
+    const changes = entry?.changes?.[0];
+    const value = changes?.value;
+    const message = value?.messages?.[0];
+    const businessPhoneNumberId = value?.metadata?.phone_number_id;
 
-  if (message?.type === "text") {
-    const messageBody = message.text.body;
-    const messageFrom = message.from;
-    const business_phone_number_id =
-      req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
+    if (!message || !businessPhoneNumberId) {
+      res.sendStatus(400);
+    }
 
-    if (
-      messageBody.toLowerCase() == "hi" ||
-      messageBody.toLowerCase() == "start" ||
-      messageBody.toLowerCase() == "restart"
-    ) {
-      await sendTemplate(business_phone_number_id, messageFrom);
-    } else {
-      const userData: UserData | undefined = await db.getData(messageFrom);
-      if (userData) {
-        let result = "";
-        if (userData.conversationId === "grammar_checker") {
-          const { message } = await generateOutput(
-            grammerCheckFlow,
-            messageBody
-          );
-          result = message;
-        }
-        if (userData.conversationId === "paraphraser") {
-          const { message } = await generateOutput(
-            paraphraserFlow,
-            messageBody
-          );
-          result = message;
-        }
-        if (userData.conversationId === "synonyms") {
-          const { message } = await generateOutput(synonymsFlow, messageBody);
-          result = message;
-        }
-        if (userData.conversationId === "antonyms") {
-          const { message } = await generateOutput(antonymsFlow, messageBody);
-          result = message;
-        }
+    const messageFrom = message?.from ?? "";
 
-        await sendWAMessage(business_phone_number_id, messageFrom, result);
+    if (message?.type === "text") {
+      const messageBody = message.text.body.toLowerCase();
+
+      if (["hi", "start", "restart"].includes(messageBody)) {
+        await sendTemplate(businessPhoneNumberId, messageFrom);
+      } else {
+        const userData: UserData | undefined = await db.getData(messageFrom);
+
+        if (userData) {
+          let result = "";
+
+          switch (userData.conversationId) {
+            case "grammar_checker":
+              result = (await generateOutput(grammerCheckFlow, messageBody))
+                .message;
+              break;
+            case "paraphraser":
+              result = (await generateOutput(paraphraserFlow, messageBody))
+                .message;
+              break;
+            case "synonyms":
+              result = (await generateOutput(synonymsFlow, messageBody))
+                .message;
+              break;
+            case "antonyms":
+              result = (await generateOutput(antonymsFlow, messageBody))
+                .message;
+              break;
+            default:
+              result = "Invalid conversation ID";
+          }
+
+          await sendWAMessage(businessPhoneNumberId, messageFrom, result);
+        }
       }
     }
+
+    if (message?.type === "button") {
+      const conversationId = message.button.payload as buttonType;
+      const buttonName = message.button.text;
+
+      const userData: UserData = { conversationId };
+      await onSelectAction(businessPhoneNumberId, messageFrom, buttonName);
+      await db.setData(messageFrom, userData);
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("Error processing webhook:", error);
+    res.sendStatus(500);
   }
-  if (message?.type === "button") {
-    const conversationId = message.button.payload as buttonType;
-    const messageFrom = message.from;
-    const userData: UserData = {
-      conversationId,
-    };
-    await db.setData(messageFrom, userData);
-    console.log("Button webhook message:", JSON.stringify(req.body, null, 2));
-  }
-  res.sendStatus(200);
 });
 
 app.post("/generate", async (req: Request, res: Response) => {
