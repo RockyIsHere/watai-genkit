@@ -106,9 +106,14 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
 });
 
 app.post("/generate", async (req: Request, res: Response) => {
-  const { input } = req.body;
-  const result = await sendTemplate("331837460013168", "917029406424");
-  res.status(201).json(result);
+  // const { input } = req.body;
+  // const result = await sendTemplate("331837460013168", "917029406424");
+  try {
+    await onSelectAction("331837460013168", "917029406424", "Rocky Karmakar");
+  } catch (error) {
+    console.log(error);
+  }
+  res.status(201).json({ message: "SUCCESS" });
 });
 
 app.post(
