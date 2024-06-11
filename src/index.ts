@@ -36,73 +36,59 @@ configureGenkit({
 });
 
 app.post("/webhook", async (req: WebhookRequest, res: Response) => {
-  // Log incoming messages
+  // log incoming messages
   console.log("Incoming webhook message:", JSON.stringify(req.body, null, 2));
 
-  try {
-    const entry = req.body.entry?.[0];
-    const changes = entry?.changes?.[0];
-    const value = changes?.value;
-    const message = value?.messages?.[0];
-    const businessPhoneNumberId = value?.metadata?.phone_number_id;
+  const message = req.body.entry?.[0]?.changes[0]?.value?.messages?.[0];
 
-    if (!message || !businessPhoneNumberId) {
-      res.sendStatus(400);
-    }
+  const businessPhoneNumberId =
+    req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
 
-    const messageFrom = message?.from ?? "";
+  if (message?.type === "text") {
+    const messageBody = message.text.body;
+    const messageFrom = message.from;
 
-    if (message?.type === "text") {
-      const messageBody = message.text.body.toLowerCase();
+    if (["hi", "start", "restart"].includes(messageBody)) {
+      await sendTemplate(businessPhoneNumberId, messageFrom);
+    } else {
+      const userData: UserData | undefined = await db.getData(messageFrom);
+      if (userData) {
+        let result = "";
 
-      if (["hi", "start", "restart"].includes(messageBody)) {
-        await sendTemplate(businessPhoneNumberId, messageFrom);
-      } else {
-        const userData: UserData | undefined = await db.getData(messageFrom);
-
-        if (userData) {
-          let result = "";
-
-          switch (userData.conversationId) {
-            case "grammar_checker":
-              result = (await generateOutput(grammerCheckFlow, messageBody))
-                .message;
-              break;
-            case "paraphraser":
-              result = (await generateOutput(paraphraserFlow, messageBody))
-                .message;
-              break;
-            case "synonyms":
-              result = (await generateOutput(synonymsFlow, messageBody))
-                .message;
-              break;
-            case "antonyms":
-              result = (await generateOutput(antonymsFlow, messageBody))
-                .message;
-              break;
-            default:
-              result = "Invalid conversation ID";
-          }
-
-          await sendWAMessage(businessPhoneNumberId, messageFrom, result);
+        switch (userData.conversationId) {
+          case "grammar_checker":
+            result = (await generateOutput(grammerCheckFlow, messageBody))
+              .message;
+            break;
+          case "paraphraser":
+            result = (await generateOutput(paraphraserFlow, messageBody))
+              .message;
+            break;
+          case "synonyms":
+            result = (await generateOutput(synonymsFlow, messageBody)).message;
+            break;
+          case "antonyms":
+            result = (await generateOutput(antonymsFlow, messageBody)).message;
+            break;
+          default:
+            result = "Invalid conversation ID";
         }
+
+        await sendWAMessage(businessPhoneNumberId, messageFrom, result);
       }
     }
-
-    if (message?.type === "button") {
-      const conversationId = message.button.payload as buttonType;
-      const buttonName = message.button.text;
-
-      const userData: UserData = { conversationId };
-      await onSelectAction(businessPhoneNumberId, messageFrom, buttonName);
-      await db.setData(messageFrom, userData);
-    }
-
-    res.sendStatus(200);
-  } catch (error) {
-    console.error("Error processing webhook:", error);
-    res.sendStatus(500);
   }
+  if (message?.type === "button") {
+    const conversationId = message.button.payload as buttonType;
+    const messageFrom = message.from;
+    const buttonName = message.button.text;
+    const userData: UserData = {
+      conversationId,
+    };
+    await onSelectAction(businessPhoneNumberId, messageFrom, buttonName);
+    await db.setData(messageFrom, userData);
+  }
+  res.sendStatus(200);
 });
 
 app.post("/generate", async (req: Request, res: Response) => {
