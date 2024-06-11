@@ -48,7 +48,7 @@ export async function onSelectAction(
         },
         components: [
           {
-            type: "headers",
+            type: "header",
             parameters: [
               {
                 type: "text",
