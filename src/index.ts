@@ -107,7 +107,7 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
 
 app.post("/generate", async (req: Request, res: Response) => {
   const { input } = req.body;
-  const result = await generateOutput(antonymsFlow, input);
+  const result = await sendTemplate("331837460013168", "917029406424");
   res.status(201).json(result);
 });
 

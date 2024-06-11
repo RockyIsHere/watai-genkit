@@ -21,6 +21,7 @@ export default async function sendTemplate(
     data = getActionTemplate(to, template);
   }
 
+
   await axios
     .post(url, data, { headers })
     .then((response) => {
@@ -82,7 +83,7 @@ function getActionTemplate(to: string, template: string) {
         {
           type: "button",
           sub_type: "quick_reply",
-          index: "2",
+          index: "3",
           parameters: [
             {
               type: "payload",
