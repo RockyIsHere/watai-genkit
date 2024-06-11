@@ -1,14 +1,11 @@
 import { defineFlow, geminiPro, generate, z } from "../exports";
-
-const grammerOutputSchema = z.object({
-  message: z.string(),
-});
+import { outputSchema } from "../types";
 
 export const grammerCheckFlow = defineFlow(
   {
     name: "grammerCheckFlow",
     inputSchema: z.string(),
-    outputSchema: grammerOutputSchema,
+    outputSchema: outputSchema,
   },
   async (subject): Promise<any> => {
     const llmResponse = await generate({
@@ -16,7 +13,7 @@ export const grammerCheckFlow = defineFlow(
         Here is the sentence that needs correction:
        ${subject}`,
       model: geminiPro,
-      output: { schema: grammerOutputSchema },
+      output: { schema: outputSchema },
       config: {
         temperature: 1,
       },

@@ -1,9 +1,9 @@
-import { buttonType } from "../webhook/_types/types";
+import { buttonType } from "../types";
 
 const { db } = require("../firebase");
 
 export type UserData = {
-  conversationId: buttonType
+  conversationId: buttonType;
 };
 
 export class DatabaseService {

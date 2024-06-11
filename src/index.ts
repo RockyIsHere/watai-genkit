@@ -7,18 +7,16 @@ import generateOutput, { sendWAMessage } from "./webhook/wp.message";
 import { grammerCheckFlow } from "./actions/grammer.check";
 import multer from "multer";
 import { extractText, pdfSummaryFlow } from "./actions/pdf.summary";
-import {
-  buttonType,
-  VerificationRequest,
-  WebhookRequest,
-} from "./webhook/_types/types";
+import { buttonType, VerificationRequest, WebhookRequest } from "./types";
 import dotenv from "dotenv";
 import { DatabaseService, UserData } from "./service/db";
 import sendTemplate from "./webhook/tamplate";
 import { paraphraserFlow } from "./actions/paraphraser";
+import { synonymsFlow } from "./actions/synonyms";
+import { antonymsFlow } from "./actions/antonyms";
 
 dotenv.config();
-const { WEBHOOK_VERIFY_TOKEN, GRAPH_API_TOKEN, PORT } = process.env;
+const { WEBHOOK_VERIFY_TOKEN, PORT } = process.env;
 
 const app = express();
 const db = new DatabaseService();
@@ -70,6 +68,14 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
           );
           result = message;
         }
+        if (userData.conversationId === "synonyms") {
+          const { message } = await generateOutput(synonymsFlow, messageBody);
+          result = message;
+        }
+        if (userData.conversationId === "antonyms") {
+          const { message } = await generateOutput(antonymsFlow, messageBody);
+          result = message;
+        }
 
         await sendWAMessage(business_phone_number_id, messageFrom, result);
       }
@@ -87,8 +93,10 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
   res.sendStatus(200);
 });
 
-app.post("/db", async (req: Request, res: Response) => {
-  res.status(201).json({ userData: "SUCCESS" });
+app.post("/generate", async (req: Request, res: Response) => {
+  const { input } = req.body;
+  const result = await generateOutput(antonymsFlow, input);
+  res.status(201).json(result);
 });
 
 app.post(

@@ -1,4 +1,9 @@
 import { Request } from "express";
+import { z } from "zod";
+
+export const outputSchema = z.object({
+  message: z.string(),
+});
 
 export interface WebhookRequest extends Request {
   body: {
@@ -25,7 +30,11 @@ export interface WebhookRequest extends Request {
   };
 }
 
-export type buttonType = "grammar_checker" | "paraphraser";
+export type buttonType =
+  | "grammar_checker"
+  | "paraphraser"
+  | "synonyms"
+  | "antonyms";
 
 export interface VerificationRequest extends Request {
   query: {
