@@ -34,7 +34,8 @@ export type buttonType =
   | "grammar_checker"
   | "paraphraser"
   | "synonyms"
-  | "antonyms";
+  | "antonyms"
+  | "qr_code_generator";
 
 export interface VerificationRequest extends Request {
   query: {

@@ -17,6 +17,7 @@ import sendTemplate from "./webhook/tamplate";
 import { paraphraserFlow } from "./actions/paraphraser";
 import { synonymsFlow } from "./actions/synonyms";
 import { antonymsFlow } from "./actions/antonyms";
+import { generateAndUploadQRCode } from "./actions/qrcode.generator";
 
 dotenv.config();
 const { WEBHOOK_VERIFY_TOKEN, PORT } = process.env;
@@ -52,7 +53,7 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
       await sendTemplate(businessPhoneNumberId, messageFrom);
     } else {
       const userData: UserData | undefined = await db.getData(messageFrom);
-      if (userData) {
+      if (userData && businessPhoneNumberId) {
         let result = "";
 
         switch (userData.conversationId) {
@@ -69,6 +70,14 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
             break;
           case "antonyms":
             result = (await generateOutput(antonymsFlow, messageBody)).message;
+            break;
+          case "qr_code_generator":
+            await generateAndUploadQRCode(
+              messageBody,
+              messageFrom,
+              businessPhoneNumberId
+            );
+            result = `QRCode is generated for this given text: *${messageBody}*`;
             break;
           default:
             result = "Invalid conversation ID";
@@ -95,7 +104,11 @@ app.post("/generate", async (req: Request, res: Response) => {
   // const { input } = req.body;
   // const result = await sendTemplate("331837460013168", "917029406424");
   try {
-    await onSelectAction("331837460013168", "917029406424", "Rocky Karmakar");
+    await generateAndUploadQRCode(
+      "Hi, I am rocky",
+      "917029406424",
+      "331837460013168"
+    );
   } catch (error) {
     console.log(error);
   }

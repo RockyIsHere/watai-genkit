@@ -14,13 +14,7 @@ export default async function sendTemplate(
   const url = `https://graph.facebook.com/v19.0/${phone_number_id}/messages`;
   const template = TEMPLATE || "select_utility";
   var data = {};
-  if (template === "select_utility") {
-    data = getUtilTemplate(to, template);
-  }
-  if (template === "select_action") {
-    data = getActionTemplate(to, template);
-  }
-
+  data = getActionTemplate(to, template);
 
   await axios
     .post(url, data, { headers })
@@ -91,43 +85,14 @@ function getActionTemplate(to: string, template: string) {
             },
           ],
         },
-      ],
-    },
-  };
-  return data;
-}
-
-function getUtilTemplate(to: string, template: string) {
-  const data = {
-    messaging_product: "whatsapp",
-    recipient_type: "individual",
-    to: to,
-    type: "template",
-    template: {
-      name: template,
-      language: {
-        code: "en",
-      },
-      components: [
         {
           type: "button",
           sub_type: "quick_reply",
-          index: "0",
+          index: "4",
           parameters: [
             {
               type: "payload",
-              payload: "grammar_checker",
-            },
-          ],
-        },
-        {
-          type: "button",
-          sub_type: "quick_reply",
-          index: "1",
-          parameters: [
-            {
-              type: "payload",
-              payload: "paraphraser",
+              payload: "qr_code_generator",
             },
           ],
         },
