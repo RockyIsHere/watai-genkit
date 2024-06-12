@@ -96,6 +96,28 @@ function getActionTemplate(to: string, template: string) {
             },
           ],
         },
+        {
+          type: "button",
+          sub_type: "quick_reply",
+          index: "5",
+          parameters: [
+            {
+              type: "payload",
+              payload: "english_poem",
+            },
+          ],
+        },
+        {
+          type: "button",
+          sub_type: "quick_reply",
+          index: "6",
+          parameters: [
+            {
+              type: "payload",
+              payload: "quotes",
+            },
+          ],
+        },
       ],
     },
   };

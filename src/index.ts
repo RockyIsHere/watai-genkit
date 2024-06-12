@@ -18,6 +18,9 @@ import { paraphraserFlow } from "./actions/paraphraser";
 import { synonymsFlow } from "./actions/synonyms";
 import { antonymsFlow } from "./actions/antonyms";
 import { generateAndUploadQRCode } from "./actions/qrcode.generator";
+import { quotesFlow } from "./actions/quotes";
+import { englishPoemFlow } from "./actions/english.poem";
+import { bengaliPoemFlow } from "./actions/bengali.poem";
 
 dotenv.config();
 const { WEBHOOK_VERIFY_TOKEN, PORT } = process.env;
@@ -71,6 +74,14 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
           case "antonyms":
             result = (await generateOutput(antonymsFlow, messageBody)).message;
             break;
+          case "english_poem":
+            result = (await generateOutput(englishPoemFlow, messageBody))
+              .message;
+            break;
+          case "quotes":
+            result = (await generateOutput(quotesFlow, messageBody))
+              .message;
+            break;
           case "qr_code_generator":
             await generateAndUploadQRCode(
               messageBody,
@@ -101,18 +112,13 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
 });
 
 app.post("/generate", async (req: Request, res: Response) => {
-  // const { input } = req.body;
-  // const result = await sendTemplate("331837460013168", "917029406424");
+  const { input } = req.body;
   try {
-    await generateAndUploadQRCode(
-      "Hi, I am rocky",
-      "917029406424",
-      "331837460013168"
-    );
+    const result = (await generateOutput(bengaliPoemFlow, input)).message;
+    res.status(201).json({ message: result });
   } catch (error) {
-    console.log(error);
+    res.status(400);
   }
-  res.status(201).json({ message: "SUCCESS" });
 });
 
 app.post(

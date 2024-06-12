@@ -35,7 +35,9 @@ export type buttonType =
   | "paraphraser"
   | "synonyms"
   | "antonyms"
-  | "qr_code_generator";
+  | "qr_code_generator"
+  | "english_poem"
+  | "quotes";
 
 export interface VerificationRequest extends Request {
   query: {
