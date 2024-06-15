@@ -125,3 +125,33 @@ export const sendMediaFile = async (
     throw new Error(error);
   }
 };
+
+export const sendMediaFileByURL = async (
+  to: string,
+  link: string|null,
+  phone_number_id: string
+) => {
+  try {
+    const data = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: to,
+      type: "video",
+      video: {
+        link: link,
+        caption: "",
+      },
+    };
+    await axios({
+      method: "POST",
+      url: `https://graph.facebook.com/v19.0/${phone_number_id}/messages`,
+      headers: {
+        Authorization: `Bearer ${GRAPH_API_TOKEN}`,
+      },
+      data: data,
+    });
+  } catch (error: any) {
+    console.log(error);
+    throw new Error(error);
+  }
+};

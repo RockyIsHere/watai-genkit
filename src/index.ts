@@ -4,12 +4,10 @@ import express, { Request, Response } from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import generateOutput, {
-  onSelectAction,
+  sendMediaFileByURL,
   sendWAMessage,
 } from "./webhook/wp.message";
 import { grammerCheckFlow } from "./actions/grammer.check";
-import multer from "multer";
-import { extractText, pdfSummaryFlow } from "./actions/pdf.summary";
 import { buttonType, VerificationRequest, WebhookRequest } from "./types";
 import dotenv from "dotenv";
 import { DatabaseService, UserData } from "./service/db";
@@ -20,18 +18,19 @@ import { antonymsFlow } from "./actions/antonyms";
 import { generateAndUploadQRCode } from "./actions/qrcode.generator";
 import { quotesFlow } from "./actions/quotes";
 import { englishPoemFlow } from "./actions/english.poem";
-import { bengaliPoemFlow } from "./actions/bengali.poem";
 
 dotenv.config();
 const { WEBHOOK_VERIFY_TOKEN, PORT } = process.env;
 
 const app = express();
 const db = new DatabaseService();
+import routes from "./apis/index";
+import { getFacebookVideoUrl } from "./actions/facebook.video.download";
 
 app.use(cors());
 app.use(bodyParser.json());
 
-const upload = multer({ dest: "uploads/" });
+app.use("/v1", routes);
 
 configureGenkit({
   plugins: [googleAI()],
@@ -57,44 +56,60 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
     } else {
       const userData: UserData | undefined = await db.getData(messageFrom);
       if (userData && businessPhoneNumberId) {
-        let result = "";
+        try {
+          let result = "";
 
-        switch (userData.conversationId) {
-          case "grammar_checker":
-            result = (await generateOutput(grammerCheckFlow, messageBody))
-              .message;
-            break;
-          case "paraphraser":
-            result = (await generateOutput(paraphraserFlow, messageBody))
-              .message;
-            break;
-          case "synonyms":
-            result = (await generateOutput(synonymsFlow, messageBody)).message;
-            break;
-          case "antonyms":
-            result = (await generateOutput(antonymsFlow, messageBody)).message;
-            break;
-          case "english_poem":
-            result = (await generateOutput(englishPoemFlow, messageBody))
-              .message;
-            break;
-          case "quotes":
-            result = (await generateOutput(quotesFlow, messageBody))
-              .message;
-            break;
-          case "qr_code_generator":
-            await generateAndUploadQRCode(
-              messageBody,
-              messageFrom,
-              businessPhoneNumberId
-            );
-            result = `QRCode is generated for this given text: *${messageBody}*`;
-            break;
-          default:
-            result = "Invalid conversation ID";
+          switch (userData.conversationId) {
+            case "grammar_checker":
+              result = (await generateOutput(grammerCheckFlow, messageBody))
+                .message;
+              break;
+            case "paraphraser":
+              result = (await generateOutput(paraphraserFlow, messageBody))
+                .message;
+              break;
+            case "synonyms":
+              result = (await generateOutput(synonymsFlow, messageBody))
+                .message;
+              break;
+            case "antonyms":
+              result = (await generateOutput(antonymsFlow, messageBody))
+                .message;
+              break;
+            case "english_poem":
+              result = (await generateOutput(englishPoemFlow, messageBody))
+                .message;
+              break;
+            case "quotes":
+              result = (await generateOutput(quotesFlow, messageBody)).message;
+              break;
+            case "facebook_video_downloder":
+              const videoUrl = await getFacebookVideoUrl(messageBody);
+
+              await sendMediaFileByURL(
+                messageFrom,
+                videoUrl,
+                businessPhoneNumberId
+              );
+              break;
+            case "qr_code_generator":
+              await generateAndUploadQRCode(
+                messageBody,
+                messageFrom,
+                businessPhoneNumberId
+              );
+              result = `QRCode is generated for this given text: *${messageBody}*`;
+              break;
+            default:
+              result = "Invalid conversation ID";
+          }
+        } catch (error) {
+          await sendWAMessage(
+            businessPhoneNumberId,
+            messageFrom,
+            "Please try again; there was a mistake on our end."
+          );
         }
-
-        await sendWAMessage(businessPhoneNumberId, messageFrom, result);
       }
     }
   }
@@ -110,30 +125,6 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
   }
   res.sendStatus(200);
 });
-
-app.post("/generate", async (req: Request, res: Response) => {
-  const { input } = req.body;
-  try {
-    const result = (await generateOutput(bengaliPoemFlow, input)).message;
-    res.status(201).json({ message: result });
-  } catch (error) {
-    res.status(400);
-  }
-});
-
-app.post(
-  "/upload",
-  upload.single("pdf"),
-  async (req: Request, res: Response) => {
-    if (!req.file) {
-      res.status(400).send("No file uploaded.");
-    }
-    const extractedText: string = await extractText(req.file?.path ?? "");
-
-    const result = await generateOutput(pdfSummaryFlow, extractedText);
-    res.status(201).json({ message: result.summary });
-  }
-);
 
 app.get("/webhook", (req: VerificationRequest, res: Response) => {
   const mode = req.query["hub.mode"];

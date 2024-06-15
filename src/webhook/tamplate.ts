@@ -118,6 +118,17 @@ function getActionTemplate(to: string, template: string) {
             },
           ],
         },
+        {
+          type: "button",
+          sub_type: "quick_reply",
+          index: "7",
+          parameters: [
+            {
+              type: "payload",
+              payload: "facebook_video_downloder",
+            },
+          ],
+        },
       ],
     },
   };
