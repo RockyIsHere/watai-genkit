@@ -9,10 +9,21 @@ import {
   getFacebookVideoUrl,
 } from "../actions/facebook.video.download";
 import * as path from "path";
+import { grammerCheckFlow } from "../actions/grammer.check";
 
 const router = express.Router();
 
 const upload = multer({ dest: "uploads/" });
+
+router.post("/grammer-checker", async (req: Request, res: Response) => {
+  const { input } = req.body;
+  try {
+    const result = (await generateOutput(grammerCheckFlow, input)).message;
+    res.status(201).json({ message: result });
+  } catch (error) {
+    res.status(400);
+  }
+});
 
 router.post("/generate", async (req: Request, res: Response) => {
   const { input } = req.body;

@@ -51,7 +51,7 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
     const messageBody = message.text.body;
     const messageFrom = message.from;
 
-    if (["hi", "start", "restart"].includes(messageBody)) {
+    if (["hi", "start", "restart"].includes(messageBody.toLowerCase())) {
       await sendTemplate(businessPhoneNumberId, messageFrom);
     } else {
       const userData: UserData | undefined = await db.getData(messageFrom);
@@ -103,6 +103,11 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
             default:
               result = "Invalid conversation ID";
           }
+          await sendWAMessage(
+            businessPhoneNumberId,
+            messageFrom,
+            result
+          );
         } catch (error) {
           await sendWAMessage(
             businessPhoneNumberId,
