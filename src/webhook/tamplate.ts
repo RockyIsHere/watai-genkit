@@ -146,9 +146,7 @@ function getActionTemplate(to: string, template: string) {
   return data;
 }
 
-
-
-function getWatAiV1Template(to: string,tamplate: string){
+function getWatAiV1Template(to: string, tamplate: string) {
   const data = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
@@ -160,6 +158,17 @@ function getWatAiV1Template(to: string,tamplate: string){
         code: "en",
       },
       components: [
+        {
+          type: "header",
+          parameters: [
+            {
+              type: "image",
+              image: {
+                link: APP_LOGO,
+              },
+            },
+          ],
+        },
         {
           type: "button",
           sub_type: "quick_reply",
