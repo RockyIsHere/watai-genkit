@@ -26,6 +26,7 @@ const app = express();
 const db = new DatabaseService();
 import routes from "./apis/index";
 import { getFacebookVideoUrl } from "./actions/facebook.video.download";
+import { getTwitterVideoUrl } from "./actions/twitter.video.download";
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -89,6 +90,14 @@ app.post("/webhook", async (req: WebhookRequest, res: Response) => {
               await sendMediaFileByURL(
                 messageFrom,
                 videoUrl,
+                businessPhoneNumberId
+              );
+              break;
+            case "twitter_video_downloder":
+              const twitterURL = await getTwitterVideoUrl(messageBody);
+              await sendMediaFileByURL(
+                messageFrom,
+                twitterURL,
                 businessPhoneNumberId
               );
               break;

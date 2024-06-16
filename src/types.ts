@@ -38,7 +38,8 @@ export type buttonType =
   | "qr_code_generator"
   | "english_poem"
   | "quotes"
-  | "facebook_video_downloder";
+  | "facebook_video_downloder"
+  | "twitter_video_downloder";
 
 export interface VerificationRequest extends Request {
   query: {
