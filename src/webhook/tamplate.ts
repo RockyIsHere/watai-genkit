@@ -260,7 +260,7 @@ function getWatAiV1Template(to: string, tamplate: string) {
         {
           type: "button",
           sub_type: "quick_reply",
-          index: "7",
+          index: "8",
           parameters: [
             {
               type: "payload",
